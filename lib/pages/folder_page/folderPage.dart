@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:smart_storage/constants.dart';
+import 'package:smart_storage/models/folder.dart';
+import 'package:smart_storage/pages/note/note_detail.dart';
+import 'package:smart_storage/provider/note_provider.dart';
+import 'package:smart_storage/repository/folder_repository.dart';
 import 'package:smart_storage/widgets/search_plugin.dart';
 
 class folderPage extends StatefulWidget {
@@ -11,32 +16,60 @@ class folderPage extends StatefulWidget {
 
 class _folderPageState extends State<folderPage> {
   final TextEditingController _folderController = TextEditingController();
+  final FolderRepository _folderRepository = FolderRepository();
+  late List<Folder> folders;
+  @override
+  void initState() {
+    super.initState();
+    folders = [];
+    _loadFolders();
+  }
+
+  Future<void> _loadFolders() async {
+    // Tải dữ liệu từ repository
+    List<Folder> loadedFolders = await _folderRepository.getFolders();
+    setState(() {
+      folders = loadedFolders;
+    });
+  }
+
   void _showInputDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Enter name folder'),
+          backgroundColor: Colors.white,
+          title: Text('Folder'),
           content: TextField(
             controller:
                 _folderController, // Use the controller to get the input text
-            decoration: InputDecoration(hintText: "Type something"),
+            decoration: InputDecoration(hintText: "Enter folder name"),
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                // Handle the text input when the "OK" button is pressed
-                String nameFolder = _folderController.text;
-                print('User input: $nameFolder'); // You can handle it as needed
                 Navigator.pop(context); // Close the dialog
               },
-              child: Text('OK'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.black),
+              ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                // Handle the text input when the "OK" button is pressed
+                String nameFolder = _folderController.text;
+                await _folderRepository.addFolder(nameFolder);
+                setState(() {
+                  folders.add(Folder(name: nameFolder));
+                });
+                _folderController.clear(); // You can handle it as needed
                 Navigator.pop(context); // Close the dialog
               },
-              child: Text('Cancel'),
+              child: Text(
+                'OK',
+                style: TextStyle(color: Colors.black),
+              ),
             ),
           ],
         );
@@ -82,7 +115,9 @@ class _folderPageState extends State<folderPage> {
                 ),
               ),
               // Sử dụng widget FolderGridView riêng biệt
-              FolderGridView(),
+              FolderGridView(
+                folders: folders,
+              ),
               Padding(
                 padding: const EdgeInsets.only(
                     left: Constants.kPadding, bottom: Constants.kPadding),
@@ -110,18 +145,8 @@ class _folderPageState extends State<folderPage> {
 
 class FolderGridView extends StatelessWidget {
 // Controller to manage text input
-
-  final List<String> folderNames = [
-    "Documents",
-    "Photos",
-    "Music",
-    "Videos",
-    "Projects",
-    "Downloads",
-    "Work",
-    "Personal"
-  ];
-
+  final List<Folder> folders;
+  const FolderGridView({required this.folders});
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
@@ -133,7 +158,7 @@ class FolderGridView extends StatelessWidget {
         mainAxisSpacing: Constants.kPadding / 2,
         childAspectRatio: 0.8,
       ),
-      itemCount: folderNames.length,
+      itemCount: folders.length,
       itemBuilder: (context, index) {
         return Padding(
           padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
@@ -141,11 +166,11 @@ class FolderGridView extends StatelessWidget {
             onLongPressStart: (details) {
               // Hiển thị menu popup tại vị trí nhấn giữ
               _showPopupMenu(
-                  context, details.globalPosition, folderNames[index]);
+                  context, details.globalPosition, folders[index].name);
             },
             child: InkWell(
               onTap: () {
-                print("Tapped on ${folderNames[index]}");
+                print("Tapped on ${folders[index].name}");
               },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -187,7 +212,7 @@ class FolderGridView extends StatelessWidget {
                             ),
                             child: Center(
                               child: Text(
-                                '5',
+                                '0',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -203,7 +228,7 @@ class FolderGridView extends StatelessWidget {
                     padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
                     child: Flexible(
                       child: Text(
-                        folderNames[index],
+                        folders[index].name,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: Constants.kSizeTitle,
@@ -310,115 +335,146 @@ class FolderGridView extends StatelessWidget {
 }
 
 class NoteGridView extends StatelessWidget {
-  final double maxCrossAxisExtent; // Thêm thuộc tính cho maxCrossAxisExtent
-  final double childAspectRatio; // Thêm thuộc tính cho maxCrossAxisExtent
+  final double maxCrossAxisExtent;
+  final double childAspectRatio;
 
-  // Khởi tạo với tham số maxCrossAxisExtent
-  NoteGridView(
-      {required this.maxCrossAxisExtent, required this.childAspectRatio});
+  NoteGridView({
+    required this.maxCrossAxisExtent,
+    required this.childAspectRatio,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Lấy danh sách ghi chú từ NoteProvider
+    final notes = Provider.of<NoteProvider>(context).notes;
+
     return GridView.builder(
       shrinkWrap: true,
       physics:
           NeverScrollableScrollPhysics(), // Vô hiệu hóa cuộn riêng của GridView
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: maxCrossAxisExtent, // Sử dụng thuộc tính này
+        maxCrossAxisExtent: maxCrossAxisExtent,
         crossAxisSpacing: Constants.kPadding / 2,
         mainAxisSpacing: Constants.kPadding,
-        childAspectRatio:
-            childAspectRatio, // Điều chỉnh chiều cao tương ứng với chiều rộng
+        childAspectRatio: childAspectRatio,
       ),
-      itemCount: 100, // Số lượng item trong grid
+      itemCount: notes.length, // Dùng số lượng ghi chú trong danh sách
       itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.all(2),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white, // Màu nền
-              borderRadius: BorderRadius.circular(Constants.kBorder), // Bo góc
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Text(
-                    'Item $index',
-                    style: TextStyle(
-                      fontSize: Constants.kSizeTitle,
-                      fontWeight: Constants.kWeightTitle,
-                      color: Colors.black,
+        final note = notes[index]; // Lấy ghi chú tại index
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => NoteDetail(note: note),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white, // Màu nền
+                borderRadius:
+                    BorderRadius.circular(Constants.kBorder), // Bo góc
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // Tiêu đề
+                    // Hình ảnh
+                    SizedBox(
+                      height: 100,
+                      width: double.infinity,
+                      child: Image.network(
+                        'https://picsum.photos/300/300?random=$index',
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    height: 100, // Chiều cao cố định cho hình ảnh
-                    width: double
-                        .infinity, // Làm cho hình ảnh chiếm toàn bộ chiều rộng
-                    child: Image.network(
-                      'https://picsum.photos/300/300?random=$index',
-                      fit: BoxFit.cover, // Làm cho hình ảnh bao phủ container
-                    ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      '#Hashtag1, #Hashtag2',
+                    // Tóm tắt ghi chú
+
+                    Text(
+                      '#${note.hashTag}', // Hiển thị hashTag
                       style: TextStyle(
-                        fontSize: Constants.kSizeBody,
-                        fontWeight: Constants.kWeightBody,
+                        fontSize: Constants.kSizeTitle,
+                        fontWeight: Constants.kWeightTitle,
                         color: Colors.black,
                       ),
                     ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      'Keyword: Keyword1, Keyword2, Keyword3',
+                    Text(
+                      'Url: ${note.url}', // Hiển thị hashTag
                       style: TextStyle(
-                        fontSize: Constants.kSizeBody,
-                        fontWeight: Constants.kWeightBody,
+                        fontSize: 15,
                         color: Colors.black,
                       ),
                     ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            icon:
-                                Icon(Icons.favorite_border, color: Colors.red),
-                            onPressed: () {
-                              print('Love icon pressed for image #$index');
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.share_rounded, color: Colors.blue),
-                            onPressed: () {
-                              print('Share icon pressed for image #$index');
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.drive_file_move_rounded,
-                                color: Colors.green),
-                            onPressed: () {
-                              print('Move icon pressed for image #$index');
-                            },
-                          ),
-                        ],
+                    Flexible(
+                      child: Text(
+                        "Summarize: ${note.summarize}",
+                        style: TextStyle(
+                          fontSize: Constants.kSizeBody,
+                          fontWeight: Constants.kWeightBody,
+                          color: Colors.black,
+                        ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline, color: Colors.black),
-                        onPressed: () {
-                          print('Delete icon pressed for image #$index');
-                        },
+                    ),
+                    // Cảm nhận ghi chú
+                    Flexible(
+                      child: Text(
+                        "Sence: ${note.sence}",
+                        style: TextStyle(
+                          fontSize: Constants.kSizeBody,
+                          fontWeight: Constants.kWeightBody,
+                          color: Colors.black,
+                        ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    // Các biểu tượng và nút xoá
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.favorite_border,
+                                  color: Colors.red),
+                              onPressed: () {
+                                print('Love icon pressed for note #$index');
+                              },
+                            ),
+                            IconButton(
+                              icon:
+                                  Icon(Icons.share_rounded, color: Colors.blue),
+                              onPressed: () {
+                                print('Share icon pressed for note #$index');
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.drive_file_move_rounded,
+                                  color: Colors.green),
+                              onPressed: () {
+                                print('Move icon pressed for note #$index');
+                              },
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete_outline, color: Colors.black),
+                          onPressed: () async {
+                            // Gọi phương thức xóa ghi chú từ NoteProvider
+                            await Provider.of<NoteProvider>(context,
+                                    listen: false)
+                                .deleteNote(note.id!); // Xóa ghi chú
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

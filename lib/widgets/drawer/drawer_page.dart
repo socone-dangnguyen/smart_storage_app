@@ -1,6 +1,8 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:smart_storage/constants.dart';
+import 'package:smart_storage/provider/note_provider.dart';
+import 'package:smart_storage/repository/note_repository.dart';
 import '../responsive_layout.dart';
 
 import 'package:flutter_spinkit/flutter_spinkit.dart';
@@ -38,7 +40,6 @@ class drawerPage extends StatefulWidget {
 class _drawerPageState extends State<drawerPage> {
   late TextEditingController controller;
   bool isCreateButtonEnabled = false;
-
   int _selectedIndex = 0;
 
   @override
@@ -107,91 +108,76 @@ class _drawerPageState extends State<drawerPage> {
                     height: 10,
                   ),
                   ...List.generate(
-                      _buttonNames.length,
-                      (index) => Column(
-                            children: [
-                              Container(
-                                decoration: index == _selectedIndex
-                                    ? BoxDecoration(
-                                        borderRadius: BorderRadius.circular(10),
-                                        gradient: LinearGradient(colors: [
-                                          Constants.blueDarkGray
-                                              .withOpacity(0.9),
-                                          Constants.white.withOpacity(0.9)
-                                        ]),
-                                      )
-                                    : null,
-                                child: ListTile(
-                                  title: Text(
-                                    _buttonNames[index].title,
-                                    style: TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                  leading: Padding(
-                                    padding: const EdgeInsets.all(
-                                        Constants.kPadding),
-                                    child: Icon(
-                                      _buttonNames[index].icon,
-                                      color: index == _selectedIndex
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedIndex =
-                                          index; // Update the internal state
-                                    });
-                                    widget.onMenuSelected(
-                                        index); // Notify parent to change the page
+                    _buttonNames.length,
+                    (index) => Column(
+                      children: [
+                        Container(
+                          decoration: index == _selectedIndex
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  gradient: LinearGradient(colors: [
+                                    Constants.blueDarkGray.withOpacity(0.9),
+                                    Constants.white.withOpacity(0.9)
+                                  ]),
+                                )
+                              : null,
+                          child: ListTile(
+                            title: Text(
+                              _buttonNames[index].title,
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            leading: Padding(
+                              padding: const EdgeInsets.all(Constants.kPadding),
+                              child: Icon(
+                                _buttonNames[index].icon,
+                                color: index == _selectedIndex
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                            onTap: () {
+                              setState(() {
+                                _selectedIndex =
+                                    index; // Update the internal state
+                              });
+                              widget.onMenuSelected(
+                                  index); // Notify parent to change the page
 
-                                    // Check if the tapped item should show a popup
-                                    if (_buttonNames[index].title ==
-                                        'Add New') {
-                                      // Show the popup menu programmatically
-                                      showMenu(
-                                        context: context,
-                                        position: RelativeRect.fromLTRB(
-                                            100,
-                                            210,
-                                            100,
-                                            0), // Adjust position as needed
-                                        items: [
-                                          PopupMenuItem(
-                                            onTap: () {
-                                              _showInputUrl();
-                                            },
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: Constants.kPadding),
-                                              child: Text('Add File'),
-                                            ),
-                                          ),
-                                          PopupMenuItem(
-                                            onTap: () {
-                                              _showInputFolder();
-                                            },
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: Constants.kPadding),
-                                              child: Text('Add Folder'),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }
-                                  },
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                              Divider(
-                                color: Colors.black54,
-                                thickness: 0.3,
-                              ),
-                            ],
-                          )),
+                              // Check if the tapped item should show a popup
+                              if (_buttonNames[index].title == 'Add New') {
+                                // Show the popup menu programmatically
+                                showMenu(
+                                  context: context,
+                                  position: RelativeRect.fromLTRB(100, 210, 100,
+                                      0), // Adjust position as needed
+                                  items: [
+                                    PopupMenuItem(
+                                      onTap: () {
+                                        _showInputUrl();
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: Constants.kPadding),
+                                        child: Text('Add File'),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                            },
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                        Divider(
+                          color: Colors.black54,
+                          thickness: 0.3,
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -355,8 +341,6 @@ class _drawerPageState extends State<drawerPage> {
       );
   Future<void> submitForm(
       String hashTag, String url, String summarize, String sence) async {
-    final dio = Dio();
-
     try {
       // Collect data from text controllers
       final data = {
@@ -365,31 +349,15 @@ class _drawerPageState extends State<drawerPage> {
         "summarize": summarize,
         "sence": sence,
       };
-      // Make the POST request
-      final response = await dio.post(
-        'http://localhost:8000/notes', // Replace with your API endpoint
-        data: data,
-        options: Options(
-          headers: {
-            "Content-Type": "application/json",
-            // Add more headers if needed
-          },
-        ),
+      await Provider.of<NoteProvider>(context, listen: false).addNote(
+        hashTag: hashTag,
+        url: url,
+        summarize: summarize,
+        sence: sence,
       );
-
-      // Handle response
-      if (response.statusCode == 201) {
-        print('Form submitted successfully!');
-        print('Response: ${response.data}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Form submitted successfully!')),
-        );
-      } else {
-        print('Failed to submit form: ${response.statusCode}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit form')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Add new note successfully!')),
+      );
     } catch (e) {
       // Handle errors
       print('Error occurred: $e');
@@ -422,13 +390,7 @@ class _drawerPageState extends State<drawerPage> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    _showInputDialog(
-                      context,
-                      'testing text',
-                      'testing text',
-                      'testing text',
-                      'testing text',
-                    );
+                    _showInputDialog(context);
                   },
                   child: Text(
                     "Processing in Gemini AI Google...",
@@ -443,23 +405,17 @@ class _drawerPageState extends State<drawerPage> {
     );
   }
 
-  Future<void> _showInputDialog(
-    BuildContext context,
-    String hastag,
-    String URL,
-    String summarize,
-    String sence,
-  ) async {
-    final hastagController = TextEditingController(text: hastag);
-    final URLController = TextEditingController(text: URL);
-    final summarizeController = TextEditingController(text: summarize);
-    final senceController = TextEditingController(text: sence);
+  Future<void> _showInputDialog(context) async {
+    final hastagController = TextEditingController();
+    final URLController = TextEditingController();
+    final summarizeController = TextEditingController();
+    final senceController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Input Information'),
+          title: Text('Note'),
           content: SingleChildScrollView(
             child: Column(
               children: [
