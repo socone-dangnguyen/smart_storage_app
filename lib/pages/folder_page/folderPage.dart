@@ -10,6 +10,40 @@ class folderPage extends StatefulWidget {
 }
 
 class _folderPageState extends State<folderPage> {
+  final TextEditingController _folderController = TextEditingController();
+  void _showInputDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Enter name folder'),
+          content: TextField(
+            controller:
+                _folderController, // Use the controller to get the input text
+            decoration: InputDecoration(hintText: "Type something"),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                // Handle the text input when the "OK" button is pressed
+                String nameFolder = _folderController.text;
+                print('User input: $nameFolder'); // You can handle it as needed
+                Navigator.pop(context); // Close the dialog
+              },
+              child: Text('OK'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,7 +69,9 @@ class _folderPageState extends State<folderPage> {
                       ),
                     ),
                     IconButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        _showInputDialog(context);
+                      },
                       icon: Icon(
                         Icons.add,
                         size: 30,
@@ -73,8 +109,7 @@ class _folderPageState extends State<folderPage> {
 }
 
 class FolderGridView extends StatelessWidget {
-  final TextEditingController _controller =
-      TextEditingController(); // Controller to manage text input
+// Controller to manage text input
 
   final List<String> folderNames = [
     "Documents",
@@ -86,37 +121,6 @@ class FolderGridView extends StatelessWidget {
     "Work",
     "Personal"
   ];
-  void _showInputDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Enter your text'),
-          content: TextField(
-            controller: _controller, // Use the controller to get the input text
-            decoration: InputDecoration(hintText: "Type something"),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                // Handle the text input when the "OK" button is pressed
-                String inputText = _controller.text;
-                print('User input: $inputText'); // You can handle it as needed
-                Navigator.pop(context); // Close the dialog
-              },
-              child: Text('OK'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog
-              },
-              child: Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +333,7 @@ class NoteGridView extends StatelessWidget {
       itemCount: 100, // Số lượng item trong grid
       itemBuilder: (context, index) {
         return Padding(
-          padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
+          padding: const EdgeInsets.all(2),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white, // Màu nền
