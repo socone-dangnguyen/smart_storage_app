@@ -30,7 +30,7 @@ class _mainPageState extends State<mainPage> {
           itemCount: 100, // Number of items in the grid
           itemBuilder: (context, index) {
             return Padding(
-              padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
+              padding: const EdgeInsets.all(2),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white, // Background color

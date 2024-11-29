@@ -21,24 +21,36 @@ class _folderPageState extends State<folderPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(
                     left: Constants.kPadding, bottom: Constants.kPadding),
-                child: Text(
-                  'All Folders',
-                  style: TextStyle(
-                    fontSize: Constants.kSizeTitle * 1.5,
-                    fontWeight: Constants.kWeightTitle,
-                    color: Colors.black,
-                  ),
+                child: Row(
+                  children: [
+                    Text(
+                      'All Folders',
+                      style: TextStyle(
+                        fontSize: Constants.kSizeTitle * 1.5,
+                        fontWeight: Constants.kWeightTitle,
+                        color: Colors.black,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {},
+                      icon: Icon(
+                        Icons.add,
+                        size: 30,
+                        color: Colors.black,
+                      ),
+                    )
+                  ],
                 ),
               ),
               // Sử dụng widget FolderGridView riêng biệt
               FolderGridView(),
-              const Padding(
-                padding: EdgeInsets.only(
+              Padding(
+                padding: const EdgeInsets.only(
                     left: Constants.kPadding, bottom: Constants.kPadding),
-                child: Text(
+                child: const Text(
                   'Notes',
                   style: TextStyle(
                     fontSize: Constants.kSizeTitle * 1.5,
@@ -61,6 +73,9 @@ class _folderPageState extends State<folderPage> {
 }
 
 class FolderGridView extends StatelessWidget {
+  final TextEditingController _controller =
+      TextEditingController(); // Controller to manage text input
+
   final List<String> folderNames = [
     "Documents",
     "Photos",
@@ -71,6 +86,37 @@ class FolderGridView extends StatelessWidget {
     "Work",
     "Personal"
   ];
+  void _showInputDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Enter your text'),
+          content: TextField(
+            controller: _controller, // Use the controller to get the input text
+            decoration: InputDecoration(hintText: "Type something"),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                // Handle the text input when the "OK" button is pressed
+                String inputText = _controller.text;
+                print('User input: $inputText'); // You can handle it as needed
+                Navigator.pop(context); // Close the dialog
+              },
+              child: Text('OK'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
