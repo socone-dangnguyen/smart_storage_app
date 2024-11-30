@@ -7,13 +7,28 @@ import 'package:smart_storage/pages/login/authentication/screen_onboarding/onboa
 import 'package:smart_storage/provider/note_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  var databasesPath = await getDatabasesPath();
-  String path = join(databasesPath, 'app_database.db');
+
+  String path;
+
+  if (kIsWeb) {
+    path = 'app_database.db';
+    databaseFactory =
+        databaseFactoryFfiWeb; // Or use any web-compatible factory
+  } else {
+    // For mobile (iOS/Android), you can use the usual getDatabasesPath()
+    var databasesPath = await getDatabasesPath();
+    path = join(databasesPath, 'app_database.db');
+  }
+
   bool exists = await databaseExists(path);
+
   if (!exists) {
+    // Database does not exist, create a new one
     final DatabaseConnection databaseConnection = DatabaseConnection();
     await databaseConnection.database;
     print('Database created for the first time');
