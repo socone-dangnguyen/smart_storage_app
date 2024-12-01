@@ -42,7 +42,7 @@ class _tree_map_responsiveState extends State<tree_map_responsive> {
     _pages = [
       mainPage(onItemSelected: _onItemSelected), // Replace with actual pages
       mainPage(onItemSelected: _onItemSelected), // Replace with actual pages
-      folderPage(), // Replace with actual pages
+      FolderPage(), // Replace with actual pages
       recycleBinPage(), // Replace with actual pages
       syncBackupPage(), // Replace with actual pages
     ];

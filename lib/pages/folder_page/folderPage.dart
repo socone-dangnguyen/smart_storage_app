@@ -4,20 +4,20 @@ import 'package:smart_storage/constants.dart';
 import 'package:smart_storage/models/folder.dart';
 import 'package:smart_storage/pages/note/note_detail.dart';
 import 'package:smart_storage/provider/note_provider.dart';
-import 'package:smart_storage/repository/folder_repository.dart';
+import 'package:smart_storage/provider/folder_provider.dart'; // Thêm import FolderProvider
 import 'package:smart_storage/widgets/search_plugin.dart';
 
-class folderPage extends StatefulWidget {
-  const folderPage({super.key});
+class FolderPage extends StatefulWidget {
+  const FolderPage({super.key});
 
   @override
-  State<folderPage> createState() => _folderPageState();
+  State<FolderPage> createState() => _FolderPageState();
 }
 
-class _folderPageState extends State<folderPage> {
+class _FolderPageState extends State<FolderPage> {
   final TextEditingController _folderController = TextEditingController();
-  final FolderRepository _folderRepository = FolderRepository();
-  late List<Folder> folders;
+  List<Folder> folders = [];
+
   @override
   void initState() {
     super.initState();
@@ -26,10 +26,14 @@ class _folderPageState extends State<folderPage> {
   }
 
   Future<void> _loadFolders() async {
-    // Tải dữ liệu từ repository
-    List<Folder> loadedFolders = await _folderRepository.getFolders();
+    // Tải dữ liệu từ FolderProvider
+    List<Folder>? folderList =
+        await Provider.of<FolderProvider>(context, listen: false).loadFolders();
+
     setState(() {
-      folders = loadedFolders;
+      folders = folderList != null
+          ? folderList
+          : []; // Nếu folderList là null, gán danh sách trống
     });
   }
 
@@ -41,35 +45,28 @@ class _folderPageState extends State<folderPage> {
           backgroundColor: Colors.white,
           title: Text('Folder'),
           content: TextField(
-            controller:
-                _folderController, // Use the controller to get the input text
+            controller: _folderController,
             decoration: InputDecoration(hintText: "Enter folder name"),
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Close the dialog
+                Navigator.pop(context);
               },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.black),
-              ),
+              child: Text('Cancel', style: TextStyle(color: Colors.black)),
             ),
             TextButton(
               onPressed: () async {
-                // Handle the text input when the "OK" button is pressed
                 String nameFolder = _folderController.text;
-                await _folderRepository.addFolder(nameFolder);
+                await Provider.of<FolderProvider>(context, listen: false)
+                    .addFolder(nameFolder);
                 setState(() {
                   folders.add(Folder(name: nameFolder));
                 });
-                _folderController.clear(); // You can handle it as needed
-                Navigator.pop(context); // Close the dialog
+                _folderController.clear();
+                Navigator.pop(context);
               },
-              child: Text(
-                'OK',
-                style: TextStyle(color: Colors.black),
-              ),
+              child: Text('OK', style: TextStyle(color: Colors.black)),
             ),
           ],
         );
@@ -110,14 +107,11 @@ class _folderPageState extends State<folderPage> {
                         size: 30,
                         color: Colors.black,
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
-              // Sử dụng widget FolderGridView riêng biệt
-              FolderGridView(
-                folders: folders,
-              ),
+              FolderGridView(),
               Padding(
                 padding: const EdgeInsets.only(
                     left: Constants.kPadding, bottom: Constants.kPadding),
@@ -130,7 +124,6 @@ class _folderPageState extends State<folderPage> {
                   ),
                 ),
               ),
-              // GridView bên trong SingleChildScrollView
               NoteGridView(
                 maxCrossAxisExtent: 250,
                 childAspectRatio: 0.65,
@@ -144,11 +137,11 @@ class _folderPageState extends State<folderPage> {
 }
 
 class FolderGridView extends StatelessWidget {
-// Controller to manage text input
-  final List<Folder> folders;
-  const FolderGridView({required this.folders});
   @override
   Widget build(BuildContext context) {
+    // Lấy danh sách thư mục từ FolderProvider
+    final folders = Provider.of<FolderProvider>(context).folders;
+
     return GridView.builder(
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
@@ -164,9 +157,8 @@ class FolderGridView extends StatelessWidget {
           padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
           child: GestureDetector(
             onLongPressStart: (details) {
-              // Hiển thị menu popup tại vị trí nhấn giữ
-              _showPopupMenu(
-                  context, details.globalPosition, folders[index].name);
+              _showPopupMenu(context, details.globalPosition,
+                  folders[index].id!.toInt(), folders[index].name);
             },
             child: InkWell(
               onTap: () {
@@ -199,28 +191,6 @@ class FolderGridView extends StatelessWidget {
                             color: Colors.blueAccent,
                           ),
                         ),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            height: 30,
-                            width: 30,
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '0',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -248,7 +218,7 @@ class FolderGridView extends StatelessWidget {
   }
 
   void _showPopupMenu(
-      BuildContext context, Offset position, String folderName) {
+      BuildContext context, Offset position, int id, String folderName) {
     showMenu(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -283,54 +253,15 @@ class FolderGridView extends StatelessWidget {
             print('Renaming $folderName');
             break;
           case 'delete':
-            print('Deleting $folderName');
+            Provider.of<FolderProvider>(context, listen: false)
+                .deleteFolder(id);
             break;
-          case 'add_file':
-            _showAddFileDialog(context, folderName);
-            break;
+          // case 'add_file':
+          //   _showAddFileDialog(context, folderName);
+          //   break;
         }
       }
     });
-  }
-
-  void _showAddFileDialog(BuildContext context, String folderName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        // Lấy độ rộng của màn hình
-        double screenWidth = MediaQuery.of(context).size.width;
-        return AlertDialog(
-          title: Text('Select File to Add to $folderName'),
-          content: Container(
-            width:
-                screenWidth * 0.9, // Đặt độ rộng container là 90% của màn hình
-            child: SingleChildScrollView(
-              physics: BouncingScrollPhysics(),
-              child: NoteGridView(
-                maxCrossAxisExtent: 300,
-                childAspectRatio: 1,
-              ), // Hiển thị NoteGridView
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Đóng dialog
-              },
-              child: Text('Close'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Thực hiện thêm file vào thư mục
-                print('Adding selected file to $folderName');
-                Navigator.of(context).pop(); // Đóng dialog sau khi thêm file
-              },
-              child: Text('Add File'),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
 
@@ -379,7 +310,7 @@ class NoteGridView extends StatelessWidget {
                     BorderRadius.circular(Constants.kBorder), // Bo góc
               ),
               child: Padding(
-                padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
+                padding: const EdgeInsets.all(4),
                 child: Column(
                   mainAxisSize: MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.start,

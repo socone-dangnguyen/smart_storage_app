@@ -61,8 +61,7 @@ class _mainPageState extends State<mainPage> {
                         borderRadius: BorderRadius.circular(Constants.kBorder),
                       ),
                       child: Padding(
-                        padding:
-                            const EdgeInsets.all(Constants.kPadding * 2 / 3),
+                        padding: const EdgeInsets.all(4),
                         child: Column(
                           mainAxisSize: MainAxisSize.max,
                           crossAxisAlignment: CrossAxisAlignment.start,

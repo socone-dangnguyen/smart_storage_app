@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:smart_storage/configs/db/db_connection.dart';
 import 'package:smart_storage/constants.dart';
 import 'package:smart_storage/pages/login/authentication/screen_onboarding/onboarding.dart';
+import 'package:smart_storage/provider/folder_provider.dart';
 import 'package:smart_storage/provider/note_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -40,8 +41,11 @@ void main() async {
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => NoteProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => NoteProvider()),
+        ChangeNotifierProvider(create: (context) => FolderProvider()),
+      ],
       child: const MyApp(),
     ),
   );
