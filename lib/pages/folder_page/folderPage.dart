@@ -136,11 +136,82 @@ class _FolderPageState extends State<FolderPage> {
   }
 }
 
-class FolderGridView extends StatelessWidget {
+class FolderGridView extends StatefulWidget {
+  @override
+  State<FolderGridView> createState() => _FolderGridViewState();
+}
+
+class _FolderGridViewState extends State<FolderGridView> {
+  late List<Folder> folders;
+  final TextEditingController _folderController = TextEditingController();
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    folders = [];
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load folders after the widget's dependencies are fully initialized
+    if (folders.isEmpty) {
+      folders = Provider.of<FolderProvider>(context).folders;
+    }
+  }
+
+  void _showRenameDialog(
+      BuildContext context, int folderId, String currentName) {
+    _folderController.text =
+        currentName; // Set the current name in the text controller
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: Text('Rename Folder'),
+          content: TextField(
+            controller: _folderController,
+            decoration: InputDecoration(hintText: "Enter new folder name"),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel', style: TextStyle(color: Colors.black)),
+            ),
+            TextButton(
+              onPressed: () async {
+                String newFolderName = _folderController.text;
+                if (newFolderName.isNotEmpty) {
+                  await Provider.of<FolderProvider>(context, listen: false)
+                      .updateFolderName(
+                          folderId, newFolderName); // Update folder name
+                  setState(() {
+                    // Update the folder name in the UI
+                    int index =
+                        folders.indexWhere((folder) => folder.id == folderId);
+                    if (index != -1) {
+                      folders[index].name = newFolderName;
+                    }
+                  });
+                }
+                _folderController.clear();
+                Navigator.pop(context);
+              },
+              child: Text('OK', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Lấy danh sách thư mục từ FolderProvider
-    final folders = Provider.of<FolderProvider>(context).folders;
 
     return GridView.builder(
       shrinkWrap: true,
@@ -250,7 +321,7 @@ class FolderGridView extends StatelessWidget {
       if (value != null) {
         switch (value) {
           case 'rename':
-            print('Renaming $folderName');
+            _showRenameDialog(context, id, folderName);
             break;
           case 'delete':
             Provider.of<FolderProvider>(context, listen: false)

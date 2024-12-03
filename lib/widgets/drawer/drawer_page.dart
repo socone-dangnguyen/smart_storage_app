@@ -341,6 +341,8 @@ class _drawerPageState extends State<drawerPage> {
       );
   Future<void> submitForm(
       String hashTag, String url, String summarize, String sence) async {
+    Navigator.of(context).pop(); // Close the dialog
+
     try {
       // Collect data from text controllers
       final data = {
@@ -349,6 +351,15 @@ class _drawerPageState extends State<drawerPage> {
         "summarize": summarize,
         "sence": sence,
       };
+      if (hashTag.isEmpty ||
+          url.isEmpty ||
+          summarize.isEmpty ||
+          sence.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please fill all fields')),
+        );
+        return;
+      }
       await Provider.of<NoteProvider>(context, listen: false).addNote(
         hashTag: hashTag,
         url: url,
