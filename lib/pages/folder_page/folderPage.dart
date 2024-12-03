@@ -142,22 +142,12 @@ class FolderGridView extends StatefulWidget {
 }
 
 class _FolderGridViewState extends State<FolderGridView> {
-  late List<Folder> folders;
   final TextEditingController _folderController = TextEditingController();
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    folders = [];
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Load folders after the widget's dependencies are fully initialized
-    if (folders.isEmpty) {
-      folders = Provider.of<FolderProvider>(context).folders;
-    }
+    Provider.of<FolderProvider>(context, listen: false).loadFolders();
   }
 
   void _showRenameDialog(
@@ -192,9 +182,13 @@ class _FolderGridViewState extends State<FolderGridView> {
                   setState(() {
                     // Update the folder name in the UI
                     int index =
-                        folders.indexWhere((folder) => folder.id == folderId);
+                        Provider.of<FolderProvider>(context, listen: false)
+                            .folders
+                            .indexWhere((folder) => folder.id == folderId);
                     if (index != -1) {
-                      folders[index].name = newFolderName;
+                      Provider.of<FolderProvider>(context, listen: false)
+                          .folders[index]
+                          .name = newFolderName;
                     }
                   });
                 }
@@ -213,79 +207,84 @@ class _FolderGridViewState extends State<FolderGridView> {
   Widget build(BuildContext context) {
     // Lấy danh sách thư mục từ FolderProvider
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 150,
-        crossAxisSpacing: Constants.kPadding / 2,
-        mainAxisSpacing: Constants.kPadding / 2,
-        childAspectRatio: 0.8,
-      ),
-      itemCount: folders.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
-          child: GestureDetector(
-            onLongPressStart: (details) {
-              _showPopupMenu(context, details.globalPosition,
-                  folders[index].id!.toInt(), folders[index].name);
-            },
-            child: InkWell(
-              onTap: () {
-                print("Tapped on ${folders[index].name}");
+    return Consumer<FolderProvider>(builder: (context, folderProvider, child) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 150,
+          crossAxisSpacing: Constants.kPadding / 2,
+          mainAxisSpacing: Constants.kPadding / 2,
+          childAspectRatio: 0.8,
+        ),
+        itemCount: folderProvider.folders.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
+            child: GestureDetector(
+              onLongPressStart: (details) {
+                _showPopupMenu(
+                    context,
+                    details.globalPosition,
+                    folderProvider.folders[index].id!.toInt(),
+                    folderProvider.folders[index].name);
               },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          height: 120,
-                          width: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.blue[100],
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 5,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
+              child: InkWell(
+                onTap: () {
+                  print("Tapped on ${folderProvider.folders[index].name}");
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            height: 120,
+                            width: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.blue[100],
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 5,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.folder,
+                              size: 80,
+                              color: Colors.blueAccent,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.folder,
-                            size: 80,
-                            color: Colors.blueAccent,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
-                    child: Flexible(
-                      child: Text(
-                        folders[index].name,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: Constants.kSizeTitle,
-                          fontWeight: Constants.kWeightTitle,
-                          color: Colors.black,
+                    Padding(
+                      padding: const EdgeInsets.all(Constants.kPadding * 2 / 3),
+                      child: Flexible(
+                        child: Text(
+                          folderProvider.folders[index].name,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: Constants.kSizeTitle,
+                            fontWeight: Constants.kWeightTitle,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    });
   }
 
   void _showPopupMenu(
