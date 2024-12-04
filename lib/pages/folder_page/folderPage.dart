@@ -335,152 +335,247 @@ class _FolderGridViewState extends State<FolderGridView> {
   }
 }
 
-class NoteGridView extends StatelessWidget {
+class NoteGridView extends StatefulWidget {
   final double maxCrossAxisExtent;
   final double childAspectRatio;
-
   NoteGridView({
     required this.maxCrossAxisExtent,
     required this.childAspectRatio,
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Lấy danh sách ghi chú từ NoteProvider
-    final notes = Provider.of<NoteProvider>(context).notes;
+  State<NoteGridView> createState() => _NoteGridViewState();
+}
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics:
-          NeverScrollableScrollPhysics(), // Vô hiệu hóa cuộn riêng của GridView
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: maxCrossAxisExtent,
-        crossAxisSpacing: Constants.kPadding / 2,
-        mainAxisSpacing: Constants.kPadding,
-        childAspectRatio: childAspectRatio,
-      ),
-      itemCount: notes.length, // Dùng số lượng ghi chú trong danh sách
-      itemBuilder: (context, index) {
-        final note = notes[index]; // Lấy ghi chú tại index
-
-        return GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => NoteDetail(note: note),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(2),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white, // Màu nền
-                borderRadius:
-                    BorderRadius.circular(Constants.kBorder), // Bo góc
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Column(
-                  mainAxisSize: MainAxisSize.max,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    // Tiêu đề
-                    // Hình ảnh
-                    SizedBox(
-                      height: 100,
-                      width: double.infinity,
-                      child: Image.network(
-                        'https://picsum.photos/300/300?random=$index',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    // Tóm tắt ghi chú
-
-                    Text(
-                      '#${note.hashTag}', // Hiển thị hashTag
-                      style: TextStyle(
-                        fontSize: Constants.kSizeTitle,
-                        fontWeight: Constants.kWeightTitle,
-                        color: Colors.black,
-                      ),
-                    ),
-                    Text(
-                      'Url: ${note.url}', // Hiển thị hashTag
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black,
-                      ),
-                    ),
-                    Flexible(
-                      child: Text(
-                        "Summarize: ${note.summarize}",
-                        style: TextStyle(
-                          fontSize: Constants.kSizeBody,
-                          fontWeight: Constants.kWeightBody,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                    // Cảm nhận ghi chú
-                    Flexible(
-                      child: Text(
-                        "Sence: ${note.sence}",
-                        style: TextStyle(
-                          fontSize: Constants.kSizeBody,
-                          fontWeight: Constants.kWeightBody,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                    // Các biểu tượng và nút xoá
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.favorite_border,
-                                  color: Colors.red),
-                              onPressed: () {
-                                print('Love icon pressed for note #$index');
-                              },
-                            ),
-                            IconButton(
-                              icon:
-                                  Icon(Icons.share_rounded, color: Colors.blue),
-                              onPressed: () {
-                                print('Share icon pressed for note #$index');
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.drive_file_move_rounded,
-                                  color: Colors.green),
-                              onPressed: () {
-                                print('Move icon pressed for note #$index');
-                              },
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete_outline, color: Colors.black),
-                          onPressed: () async {
-                            // Gọi phương thức xóa ghi chú từ NoteProvider
-                            await Provider.of<NoteProvider>(context,
-                                    listen: false)
-                                .deleteNote(note.id!); // Xóa ghi chú
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
+class _NoteGridViewState extends State<NoteGridView> {
+  final TextEditingController _hashTagController = TextEditingController();
+  final TextEditingController _urlController = TextEditingController();
+  final TextEditingController _summarizeController = TextEditingController();
+  final TextEditingController _senceController = TextEditingController();
+  void _showRenameDialog(BuildContext context, int nodeId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: Text('Rename Note'),
+          content: Container(
+            height: 200,
+            width: 300,
+            child: Column(
+              children: [
+                TextField(
+                  controller: _hashTagController,
+                  decoration:
+                      InputDecoration(hintText: "Enter new hashTag name"),
                 ),
-              ),
+                TextField(
+                  controller: _urlController,
+                  decoration: InputDecoration(hintText: "Enter new url name"),
+                ),
+                TextField(
+                  controller: _summarizeController,
+                  decoration:
+                      InputDecoration(hintText: "Enter new summarize name"),
+                ),
+                TextField(
+                  controller: _senceController,
+                  decoration: InputDecoration(hintText: "Enter new sense name"),
+                ),
+              ],
             ),
           ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel', style: TextStyle(color: Colors.black)),
+            ),
+            TextButton(
+              onPressed: () async {
+                String hashTag = _hashTagController.text;
+                String url = _urlController.text;
+                String summarize = _summarizeController.text;
+                String sence = _senceController.text;
+                if (hashTag.isEmpty &&
+                    url.isEmpty &&
+                    summarize.isEmpty &&
+                    sence.isEmpty) {
+                  return;
+                }
+                await Provider.of<NoteProvider>(context, listen: false)
+                    .updateNote(
+                        id: nodeId,
+                        hashTag: hashTag,
+                        url: url,
+                        summarize: summarize,
+                        sence: sence);
+                _hashTagController.clear();
+                _urlController.clear();
+                _summarizeController.clear();
+                _senceController.clear();
+                Navigator.pop(context);
+              },
+              child: Text('OK', style: TextStyle(color: Colors.black)),
+            ),
+          ],
         );
       },
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<NoteProvider>(builder: (context, noteProvider, child) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics:
+            NeverScrollableScrollPhysics(), // Vô hiệu hóa cuộn riêng của GridView
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: widget.maxCrossAxisExtent,
+          crossAxisSpacing: Constants.kPadding / 2,
+          mainAxisSpacing: Constants.kPadding,
+          childAspectRatio: widget.childAspectRatio,
+        ),
+        itemCount:
+            noteProvider.notes.length, // Dùng số lượng ghi chú trong danh sách
+        itemBuilder: (context, index) {
+          final note = noteProvider.notes[index]; // Lấy ghi chú tại index
+
+          return GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => NoteDetail(note: note),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Colors.white, // Màu nền
+                    borderRadius: BorderRadius.circular(Constants.kBorder),
+                    border: Border.all(
+                      color: Colors.black.withOpacity(0.1),
+                      width: 1,
+                    ) // Bo góc
+                    ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      // Tiêu đề
+                      // Hình ảnh
+                      SizedBox(
+                        height: 100,
+                        width: double.infinity,
+                        child: Image.network(
+                          'https://picsum.photos/300/300?random=$index',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      // Tóm tắt ghi chú
+
+                      Text(
+                        '#${note.hashTag}', // Hiển thị hashTag
+                        style: TextStyle(
+                          fontSize: Constants.kSizeTitle,
+                          fontWeight: Constants.kWeightTitle,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Text(
+                        'Url: ${note.url}', // Hiển thị hashTag
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Flexible(
+                        child: Text(
+                          "Summarize: ${note.summarize}",
+                          style: TextStyle(
+                            fontSize: Constants.kSizeBody,
+                            fontWeight: Constants.kWeightBody,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      // Cảm nhận ghi chú
+                      Flexible(
+                        child: Text(
+                          "Sence: ${note.sence}",
+                          style: TextStyle(
+                            fontSize: Constants.kSizeBody,
+                            fontWeight: Constants.kWeightBody,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      // Các biểu tượng và nút xoá
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.favorite_border,
+                                    color: Colors.red),
+                                onPressed: () {
+                                  print('Love icon pressed for note #$index');
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.share_rounded,
+                                    color: Colors.blue),
+                                onPressed: () {
+                                  print('Share icon pressed for note #$index');
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.drive_file_move_rounded,
+                                    color: Colors.green),
+                                onPressed: () {
+                                  print('Move icon pressed for note #$index');
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.grey),
+                                onPressed: () {
+                                  _hashTagController.text = note.hashTag;
+                                  _urlController.text = note.url;
+                                  _summarizeController.text = note.summarize;
+                                  _senceController.text = note.sence;
+                                  _showRenameDialog(context, note.id!);
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete_outline,
+                                    color: Colors.black),
+                                onPressed: () async {
+                                  // Gọi phương thức xóa ghi chú từ NoteProvider
+                                  await Provider.of<NoteProvider>(context,
+                                          listen: false)
+                                      .deleteNote(note.id!); // Xóa ghi chú
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    });
   }
 }
